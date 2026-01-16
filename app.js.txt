@@ -1,0 +1,97 @@
+App.js
+const taskForm = document.getElementById("task-form");
+const taskInput = document.getElementById("task-input");
+const dueDateInput = document.getElementById("due-date");
+const priorityInput = document.getElementById("priority");
+const taskList = document.getElementById("task-list");
+const filterButtons = document.querySelectorAll(".filter-buttons button");
+
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+function saveTasks() {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+function renderTasks(filter = "all") {
+    taskList.innerHTML = "";
+
+    const filtered = tasks.filter(task => {
+        if (filter === "active") return !task.completed;
+        if (filter === "completed") return task.completed;
+        if (filter === "high") return task.priority === "High";
+        return true;
+    });
+
+    filtered.forEach((task, index) => {
+        const li = document.createElement("li");
+        li.classList.add("task-item");
+
+        const info = document.createElement("div");
+        info.classList.add("task-info");
+        if (task.completed) info.classList.add("completed");
+
+        info.innerHTML = `
+            <strong>${task.text}</strong>
+            ${task.dueDate ? `<small>Due: ${task.dueDate}</small>` : ""}
+            <span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span>
+        `;
+
+        li.appendChild(info);
+
+        const completeBtn = document.createElement("button");
+        completeBtn.textContent = task.completed ? "↺" : "✔";
+        completeBtn.onclick = () => {
+            tasks[index].completed = !tasks[index].completed;
+            saveTasks();
+            renderTasks(filter);
+        };
+        li.appendChild(completeBtn);
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✎";
+        editBtn.onclick = () => {
+            const newText = prompt("Edit task:", task.text);
+            if (newText) {
+                tasks[index].text = newText;
+                saveTasks();
+                renderTasks(filter);
+            }
+        };
+        li.appendChild(editBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "🗑";
+        deleteBtn.onclick = () => {
+            tasks.splice(index, 1);
+            saveTasks();
+            renderTasks(filter);
+        };
+        li.appendChild(deleteBtn);
+
+        taskList.appendChild(li);
+    });
+}
+
+taskForm.onsubmit = function (e) {
+    e.preventDefault();
+    const newTask = {
+        text: taskInput.value.trim(),
+        dueDate: dueDateInput.value,
+        priority: priorityInput.value,
+        completed: false
+    };
+    tasks.push(newTask);
+    saveTasks();
+    taskForm.reset();
+    renderTasks();
+};
+
+filterButtons.forEach(btn => {
+    btn.onclick = () => {
+        filterButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderTasks(btn.dataset.filter);
+    };
+});
+
+renderTasks();
